@@ -70,7 +70,9 @@ public class ClimbZeroing extends Command {
     // Called once the command ends or is interrupted.
     @Override
     public void end(boolean interrupted) {
+        m_climb.setBottom();
         m_climb.setRaiserPosition(Constants.ClimbConstants.raiserLowerTarget);
+        m_climb.climbStageReset();
         System.out.println("+--------------+");
         System.out.println("| Climb Zeroed |");
         System.out.println("+--------------+");

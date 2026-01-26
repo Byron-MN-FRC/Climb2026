@@ -17,6 +17,8 @@ import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Volts;
 
+import java.util.concurrent.locks.Lock;
+
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
@@ -51,6 +53,14 @@ public class climb extends SubsystemBase {
     public double raiserUpperTarget;
     public double raiserLowerTarget;
     public boolean climbing;
+    public boolean isOnTower;
+    public int climbStage = 0;
+    public enum LockdownMode {
+        none,
+        partial,
+        full
+    };
+    public LockdownMode currentLockdownMode = LockdownMode.none;
 
     private final MotionMagicVoltage m_motionMagicReq = new MotionMagicVoltage(0).withSlot(0);
     TalonFXConfiguration climbConf = new TalonFXConfiguration();
@@ -65,6 +75,7 @@ public class climb extends SubsystemBase {
         raiserUpperTarget = Constants.ClimbConstants.raiserUpperTarget;
         raiserLowerTarget = Constants.ClimbConstants.raiserLowerTarget;
         climbing = false;
+        isOnTower = false;
 
 
         // Configs
@@ -106,10 +117,11 @@ public class climb extends SubsystemBase {
     @Override
     public void periodic() {
         // This method will be called once per scheduler run
-        SmartDashboard.putNumber("Position", raiser.getPosition().getValueAsDouble());
-        SmartDashboard.putNumber("Velocity", raiser.getVelocity().getValueAsDouble());
-        SmartDashboard.putBoolean("Climbing", climbing);
-        SmartDashboard.putBoolean("Arm Bottom Switch", getBottomSwitch());
+        SmartDashboard.putBoolean("Climbing at top", climbing);
+        SmartDashboard.putBoolean("Arm Bottom Switch is triggered", getBottomSwitch());
+        setLockdownMode();
+         SmartDashboard.putString("Lockdown Stage", currentLockdownMode.name());
+        SmartDashboard.putNumber("Climb Stage", climbStage);
     }
 
     @Override
@@ -153,6 +165,59 @@ public class climb extends SubsystemBase {
     public void setRaiserPosition(double position){
         raiser.setPosition(position);
     }
+    public boolean setBottom() {
+        return climbing = false;
+    }
+    public boolean setTop() {
+        return climbing = true;
+    }
+    public boolean getIsOnTower() {
+        return isOnTower;
+    }
+    public boolean toggleIsOnTower() {
+        return isOnTower = !isOnTower;
+    }
+    public boolean isOnTower() {
+        return isOnTower = true;
+    }
+    public boolean isNotOnTower() {
+        return isOnTower = false;
+    }
+    public int climbStageReset() {
+        return climbStage = 0;
+    }
+
+
+
+
+
+    //LOCKDOWN MODE METHODS
+    //climb stage increments from 0 to 3, then resets to 0 if above 3
+    public int climbStageIncrement() {
+        if (climbStage < 3) {
+            climbStage += 1;
+        }
+        else {
+            climbStage = 0;
+        }
+        return climbStage;
+    }
+    public LockdownMode getLockdownMode() {
+        if (climbStage == 0) {
+            return LockdownMode.none;
+        }
+        else if (climbStage == 1 || climbStage == 3) {
+            return LockdownMode.partial;
+        }
+        else {
+            return LockdownMode.full;
+        }
+    }
+    public void setLockdownMode() {
+        currentLockdownMode = getLockdownMode();
+    }
+
+
 
     // Put methods for controlling this subsystem
     // here. Call these from Commands.
